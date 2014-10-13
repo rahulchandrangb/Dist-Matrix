@@ -9,11 +9,10 @@ class Block(
   val colIdx: Int,
   val rowDiv: Int,
   val colDiv: Int,
-  val data: DenseMatrix[Double]) {
-
+  val data: DenseMatrix[Double]) extends Serializable {
   def transpose: Block = {
     val newData = data.t
-    new Block(rowIdx, colIdx, rowDiv, colDiv, newData)
+    new Block( colIdx,rowIdx, colDiv, rowDiv, newData)
   }
 
   def multiply(other: Block): Block = {
@@ -25,15 +24,17 @@ class Block(
   }
 }
 
-class BlockMatrix(rowIdx: Int, colIdx: Int, data: RDD[Block]){
+class BlockMatrix(data: RDD[Block],val rowBlockSize:Int,val colBlockSize:Int) extends Serializable {
+ 
   override def toString:String = {
-    println("Using to String?? Use with caution..")
+    println("Using toString?? Use with caution..")
     data.map(_.toString).collect.zipWithIndex.map(a => "Block:"+a._1+".\n"+a._2).mkString("\n\n\n")
   }
   
+  def transpose={
+    val newData = data.map(_.transpose)
+    
+    
+  }
   
-}
-
-object Block {
-
 }

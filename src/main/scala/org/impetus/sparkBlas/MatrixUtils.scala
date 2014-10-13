@@ -7,7 +7,6 @@ import breeze.linalg.DenseVector
 import MatrixUtils._
 
 object MatrixUtils {
-
   def multiplyDist(inp: RDD[Array[Double]], inp2: RDD[Array[Double]]) = {
     val indexedRdd = inp2.map { a =>
       var ind = 0 //cal also use a.toList.zipWithIndex
@@ -53,13 +52,28 @@ object MatrixUtils {
     }.drop(numCalcs).next._1
   }
 
-  def blockify(mat: RDD[DenseVector[Double]], rowBlockSize: Int, colBlockSize: Int) = {
-	mat.map{
-	  row => 
-	    val splitRow = row.toArray.toList.grouped(rowBlockSize)
-	    
-	  
-	}
-  }
+  def blockify(mat: RDD[(Int, DenseVector[Double])], rowBlockSize: Int, colBlockSize: Int) = {
+    val splitRow = mat.flatMap {
+      row =>
+        row._2.toArray.toList.grouped(colBlockSize).toList.zipWithIndex.map {
+          value => ((value._1, row._1), value._2)
+        }
+    }
+    val rowBlockGroupedToCol = splitRow.groupBy {
+      x =>
+        ((x._1._2 / rowBlockSize), x._2)
+    }
 
+    val rddBlocks = rowBlockGroupedToCol.map {
+      valSet =>
+        val rowIdx = valSet._1._1
+        val colIdx = valSet._1._2
+        val dataArray = valSet._2.flatMap(x => x._1._1).toArray
+        val dataMatrix = new DenseMatrix(rowBlockSize, colBlockSize, dataArray)
+        new Block(rowIdx, colIdx, rowBlockSize, colBlockSize, dataMatrix)
+    }
+    val blkMatr = new BlockMatrix(rddBlocks,rowBlockSize,colBlockSize)
+    blkMatr
+  }
+  
 }
