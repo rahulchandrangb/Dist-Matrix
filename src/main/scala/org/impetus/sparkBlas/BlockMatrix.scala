@@ -14,7 +14,6 @@ class Block(
   val data: DenseMatrix[Double]) extends Serializable {
   def transpose: Block = {
     val newData = data.t
-    
     new Block( colIdx,rowIdx, colDiv, rowDiv, newData)
   }
   

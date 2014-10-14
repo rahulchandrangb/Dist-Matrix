@@ -32,7 +32,7 @@ object MatrixUtils {
     calcElems.map(v => v._2)
   }
 
-  def convertToMatrixBlockD(inp: DenseMatrix[Double], split: (Int, Int)): Array[MatrixBlock[Double]] = {
+  def convertToMatrixBlockDLocal(inp: DenseMatrix[Double], split: (Int, Int)): Array[MatrixBlock[Double]] = {
     val m = split._1 //row split
     val n = split._2 //col split
     val numCalcs = ((inp.rows / m) + 1) * ((inp.cols / n) + 1)
@@ -52,7 +52,7 @@ object MatrixUtils {
     }.drop(numCalcs).next._1
   }
 
-  def blockify(mat: RDD[(Int, DenseVector[Double])], rowBlockSize: Int, colBlockSize: Int) = {
+  def blockify(mat: RDD[(Int, DenseVector[Double])], rowBlockSize: Int, colBlockSize: Int, bootTranspose: Boolean = false) = {
     val splitRow = mat.flatMap {
       row =>
         row._2.toArray.toList.grouped(colBlockSize).toList.zipWithIndex.map {
@@ -69,12 +69,18 @@ object MatrixUtils {
         val rowIdx = valSet._1._1
         val colIdx = valSet._1._2
         val dataArray = valSet._2.flatMap(x => x._1._1).toArray
-        val dataMatrix = new DenseMatrix(rowBlockSize, colBlockSize, dataArray)
+        val dataMatrix =
+          if (!bootTranspose) {
+            new DenseMatrix(rowBlockSize, colBlockSize, dataArray)
+          } else {
+            new DenseMatrix(colBlockSize, rowBlockSize, dataArray).t
+          }
+
         new Block(rowIdx, colIdx, rowBlockSize, colBlockSize, dataMatrix)
     }
-    
-    val blkMatr = new BlockMatrix(rddBlocks,rowBlockSize,colBlockSize)
+
+    val blkMatr = new BlockMatrix(rddBlocks, rowBlockSize, colBlockSize)
     blkMatr
   }
-  
+
 }
