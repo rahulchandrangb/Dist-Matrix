@@ -14,9 +14,10 @@ class Block(
   val data: DenseMatrix[Double]) extends Serializable {
   def transpose: Block = {
     val newData = data.t
+    
     new Block( colIdx,rowIdx, colDiv, rowDiv, newData)
   }
-
+  
   def multiply(other: Block): Block = {
     val newData = data * other.data
     new Block(rowIdx, colIdx, rowDiv, colDiv, newData)
