@@ -72,6 +72,7 @@ object MatrixUtils {
         val dataMatrix = new DenseMatrix(rowBlockSize, colBlockSize, dataArray)
         new Block(rowIdx, colIdx, rowBlockSize, colBlockSize, dataMatrix)
     }
+    
     val blkMatr = new BlockMatrix(rddBlocks,rowBlockSize,colBlockSize)
     blkMatr
   }

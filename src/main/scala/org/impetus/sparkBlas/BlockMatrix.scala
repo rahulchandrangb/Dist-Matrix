@@ -3,6 +3,8 @@ package org.impetus.sparkBlas
 import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector
 import org.apache.spark.rdd.RDD
+import org.apache.spark._
+import org.apache.spark.SparkContext._ 
 
 class Block(
   val rowIdx: Int,
@@ -32,9 +34,11 @@ class BlockMatrix(data: RDD[Block],val rowBlockSize:Int,val colBlockSize:Int) ex
   }
   
   def transpose={
-    val newData = data.map(_.transpose)
-    
-    
+    val newData = data.map(_.transpose).map{
+      blk =>
+        ((blk.rowIdx,blk.colIdx),blk)
+    }
+    newData.sortByKey(true)
   }
   
 }
