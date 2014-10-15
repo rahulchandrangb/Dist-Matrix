@@ -52,7 +52,7 @@ object MatrixUtils {
     }.drop(numCalcs).next._1
   }
 
-  def blockify(mat: RDD[(Int, DenseVector[Double])], rowBlockSize: Int, colBlockSize: Int, bootTranspose: Boolean = false) = {
+  def blockify(mat: RDD[(Int, DenseVector[Double])], rowBlockSize: Int, colBlockSize: Int, boolTranspose: Boolean = false) = {
     val splitRow = mat.flatMap {
       row =>
         row._2.toArray.toList.grouped(colBlockSize).toList.zipWithIndex.map {
@@ -70,16 +70,16 @@ object MatrixUtils {
         val colIdx = valSet._1._2
         val dataArray = valSet._2.flatMap(x => x._1._1).toArray
         val dataMatrix =
-          if (!bootTranspose) {
+          if (!boolTranspose) {
             new DenseMatrix(rowBlockSize, colBlockSize, dataArray)
           } else {
             new DenseMatrix(colBlockSize, rowBlockSize, dataArray).t
           }
 
-        new Block(rowIdx, colIdx, rowBlockSize, colBlockSize, dataMatrix)
+        Block(rowIdx, colIdx, rowBlockSize, colBlockSize, dataMatrix)
     }
 
-    val blkMatr = new BlockMatrix(rddBlocks, rowBlockSize, colBlockSize)
+    val blkMatr = BlockMatrix(rddBlocks, rowBlockSize, colBlockSize)
     blkMatr
   }
 
