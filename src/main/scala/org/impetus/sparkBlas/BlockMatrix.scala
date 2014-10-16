@@ -56,7 +56,7 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
       r =>
         val nSplitNum = otherColBlockSize.value
         val kSplitNum = thisColBlockSize.value
-        
+
         val array = Array.ofDim[((Int, Int, Int), Block)](nSplitNum)
 
         for (i <- 0 until nSplitNum) {
@@ -66,7 +66,7 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
         array
     }
 
-    val colIndexed = otherMat.data.map {
+    val colIndexed = otherMat.data.flatMap {
       c =>
         val mSplitNum = thisRowBlockSize.value
         val kSplitNum = thisColBlockSize.value
@@ -80,8 +80,37 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
         }
         array
     }
-    
-    
+
+    if (colBlocksNum != 1) {
+      val result = rowIndexed.join(colIndexed).map {
+        comb =>
+        	val blk1 = comb._2._1
+        	val blk2 = comb._2._2
+        	
+        	
+      }
+
+      /*
+      
+        .mapPartitions({iter =>
+        iter.map{ t =>
+          val b1 = t._2._1.asInstanceOf[BDM[Double]]
+          val b2 = t._2._2.asInstanceOf[BDM[Double]]
+          val c = (b1 * b2).asInstanceOf[BDM[Double]]
+          (new BlockID(t._1.row, t._1.column), c)
+        }}).partitionBy(partitioner).persist().reduceByKey( _ + _ )
+      new BlockMatrix(result, this.numRows(), other.numCols(), mSplitNum, nSplitNum)
+      
+      */
+    } else {
+      /*
+      val result = rowIndexed.join(colIndexed)
+        .mapValues(t => (t._1.asInstanceOf[BDM[Double]] * t._2.asInstanceOf[BDM[Double]])
+        .asInstanceOf[BDM[Double]])
+      new BlockMatrix(result, this.numRows(), other.numCols(), mSplitNum, nSplitNum)
+      * */
+
+    }
 
   }
 }
