@@ -20,11 +20,40 @@ case class Block(
 
   def multiply(other: Block): Block = {
     val newData = data * other.data
-    new Block(rowIdx, colIdx, rowDiv, colDiv, newData)
+    new Block(rowIdx, colIdx, newData.rows, newData.cols, newData)
   }
   override def toString: String = {
     data.toString
   }
+  def +(other: Block) = {
+    new Block(rowIdx, colIdx, rowDiv, colDiv, (data + other.data))
+  }
+  def *(other: Block) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :* other.data)
+  }
+  def -(other: Block) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :- other.data)
+  }
+
+  def /(other: Block) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :/ other.data)
+  }
+
+  def elemMultiply(con: Double) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :* con)
+  }
+  def elemAdd(con: Double) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :+ con)
+  }
+  def elemDiv(con: Double) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :/ con)
+  }
+  def elemMinus(con: Double) = {
+    Block(rowIdx, colIdx, rowDiv, colDiv, data :- con)
+  }
+
+  def getRowSize = data.rows
+  def getColSize = data.cols
 
 }
 
@@ -80,37 +109,81 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
         }
         array
     }
-
-    if (colBlocksNum != 1) {
-      val result = rowIndexed.join(colIndexed).map {
-        comb =>
-        	val blk1 = comb._2._1
-        	val blk2 = comb._2._2
-        	
-        	
-      }
-
-      /*
-      
-        .mapPartitions({iter =>
-        iter.map{ t =>
-          val b1 = t._2._1.asInstanceOf[BDM[Double]]
-          val b2 = t._2._2.asInstanceOf[BDM[Double]]
-          val c = (b1 * b2).asInstanceOf[BDM[Double]]
-          (new BlockID(t._1.row, t._1.column), c)
-        }}).partitionBy(partitioner).persist().reduceByKey( _ + _ )
-      new BlockMatrix(result, this.numRows(), other.numCols(), mSplitNum, nSplitNum)
-      
-      */
-    } else {
-      /*
-      val result = rowIndexed.join(colIndexed)
-        .mapValues(t => (t._1.asInstanceOf[BDM[Double]] * t._2.asInstanceOf[BDM[Double]])
-        .asInstanceOf[BDM[Double]])
-      new BlockMatrix(result, this.numRows(), other.numCols(), mSplitNum, nSplitNum)
-      * */
-
-    }
+    val result = rowIndexed.join(colIndexed).map {
+      comb =>
+        val blk1 = comb._2._1
+        val blk2 = comb._2._2
+        val resultMat = blk1.data * blk2.data
+        ((comb._1._1, comb._1._2), new Block(comb._1._1, comb._1._2, resultMat.rows, resultMat.cols, resultMat))
+    }.persist.reduceByKey(_ + _).map(_._2)
+    BlockMatrix(result, rowBlocksNum, otherMat.colBlocksNum)
 
   }
+
+  def elemMultiply(constnt: Double) = {
+    val broadCastConstant = data.context.broadcast(constnt)
+    val newData = this.data.map { blk =>
+      blk.elemMultiply(broadCastConstant.value)
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def elemAdd(constnt: Double) = {
+    val broadCastConstant = data.context.broadcast(constnt)
+    val newData = this.data.map { blk =>
+      blk.elemAdd(broadCastConstant.value)
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def elemMinus(constnt: Double) = {
+    val broadCastConstant = data.context.broadcast(constnt)
+    val newData = this.data.map { blk =>
+      blk.elemMinus(broadCastConstant.value)
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def elemDivide(constnt: Double) = {
+    val broadCastConstant = data.context.broadcast(constnt)
+    val newData = this.data.map { blk =>
+      blk.elemDiv(broadCastConstant.value)
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def /(other: BlockMatrix) = {
+    //TODO: (Rahul  Chandran)...Is group By/ sort By key required??
+    val newData = this.data.zip(other.data).map {
+      blk =>
+        blk._1 / blk._2
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def *(other: BlockMatrix) = { //Scalar multiplication..
+    //TODO: (Rahul  Chandran)...Is group By/ sort By key required??
+    val newData = this.data.zip(other.data).map {
+      blk =>
+        blk._1 * blk._2
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def +(other: BlockMatrix) = {
+    val newData = this.data.zip(other.data).map {
+      blk =>
+        blk._1 + blk._2
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
+  def -(other: BlockMatrix) = {
+    val newData = this.data.zip(other.data).map {
+      blk =>
+        blk._1 - blk._2
+    }
+    BlockMatrix(newData, rowBlockSize, colBlockSize)
+  }
+
 }
