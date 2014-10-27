@@ -1,4 +1,4 @@
-package org.impetus.sparkBlas
+package com.impetus.blas
 
 import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector

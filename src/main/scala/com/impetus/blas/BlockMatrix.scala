@@ -1,4 +1,4 @@
-package org.impetus.sparkBlas
+package com.impetus.blas
 
 import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector
@@ -64,7 +64,7 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
 
   override def toString: String = {
     println("Using toString?? Use with caution..")
-    data.map(_.toString).collect.zipWithIndex.map(a => "Block:" + a._1 + ".\n" + a._2).mkString("\n\n\n")
+    data.map(_.toString).collect.zipWithIndex.map(a => "Block:" + a._2 + "\n" + a._1).mkString("\n\n\n")
   }
 
   def transpose: BlockMatrix = {
@@ -79,7 +79,7 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
   def multiply(otherMat: BlockMatrix) = {
     val thisRowBlockSize = data.context.broadcast(rowBlocksNum)
     val thisColBlockSize = data.context.broadcast(colBlocksNum)
-    val otherColBlockSize = data.context.broadcast(otherMat.colBlockSize)
+    val otherColBlockSize = data.context.broadcast(otherMat.colBlocksNum)
 
     val rowIndexed = data.flatMap {
       r =>
@@ -104,7 +104,7 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
         val array = Array.ofDim[((Int, Int, Int), Block)](mSplitNum)
 
         for (j <- 0 until mSplitNum) {
-          val seq = j * nSplitNum * kSplitNum + c.colIdx * kSplitNum + c.colIdx
+          val seq = j * nSplitNum * kSplitNum + c.colIdx * kSplitNum + c.rowIdx
           array(j) = ((j, c.colIdx, seq), c)
         }
         array
@@ -120,6 +120,7 @@ case class BlockMatrix(val data: RDD[Block], val rowBlockSize: Int, val colBlock
 
   }
 
+  
   def elemMultiply(constnt: Double) = {
     val broadCastConstant = data.context.broadcast(constnt)
     val newData = this.data.map { blk =>

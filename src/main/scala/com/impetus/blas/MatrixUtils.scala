@@ -1,10 +1,21 @@
-package org.impetus.sparkBlas
+package com.impetus.blas
 
 import breeze.linalg.DenseMatrix
 import scala.math._
 import org.apache.spark.rdd.RDD
+import org.apache.spark._
+import org.apache.spark.SparkContext._
 import breeze.linalg.DenseVector
 import MatrixUtils._
+import com.impetus.blas.BlockMatrix
+import org.apache.hadoop.fs._
+
+import java.net._;
+
+import org.apache.hadoop.conf._;
+import org.apache.hadoop.io._;
+import org.apache.hadoop.mapred._;
+import org.apache.hadoop.util._;
 
 object MatrixUtils {
   def multiplyDist(inp: RDD[Array[Double]], inp2: RDD[Array[Double]]) = {
@@ -79,8 +90,48 @@ object MatrixUtils {
         Block(rowIdx, colIdx, rowBlockSize, colBlockSize, dataMatrix)
     }
 
-    val blkMatr = BlockMatrix(rddBlocks, rowBlockSize, colBlockSize)
+    val sortedRddVal = rddBlocks.map {
+      x =>
+        ((x.rowIdx, x.colIdx), x)
+    }.sortByKey(true)
+    val newRddBlocks = sortedRddVal.map(_._2)
+    val blkMatr = BlockMatrix(newRddBlocks, rowBlockSize, colBlockSize)
     blkMatr
+  }
+
+  def readDenseMatrixWithSpark(sc: SparkContext, fpath: String, rowNum: Int, colNum: Int):DenseMatrix[Double] = {
+    val data = sc.textFile(fpath).map(x => x.split(",").map(_.toDouble)).collect.flatten
+    new DenseMatrix(rowNum, colNum, data)
+  }
+  def readDenseMatrix(fpath: String, rowNum: Int, colNum: Int)={
+    val data = readHdfsToString(fpath).replaceAll("\n","").split(",").map(_.toDouble)
+    new DenseMatrix(rowNum, colNum, data)
+  }
+  def writeDenseMatrix(fpath: String, mat: DenseMatrix[Double]) = {
+    val conf = new Configuration()
+    val fs= FileSystem.get(conf)
+    val output = fs.create(new Path("/your/path"))
+    val writer = new java.io.PrintWriter(output)
+    try {
+        for(i <-0 until mat.rows)
+        writer.write(mat(i,::).t.toArray.mkString(","))         
+    }
+    finally {
+        writer.close()
+    }
+  }
+
+  def readHdfsToString(fpath: String):String = {
+    val pt: Path = new Path(fpath)
+    val fs: FileSystem = FileSystem.get(new Configuration)
+    val br: java.io.BufferedReader = new java.io.BufferedReader(new java.io.InputStreamReader(fs.open(pt)))
+    var result=""
+    var line = br.readLine()
+    while (line != null) {
+      result+=line
+      line = br.readLine()
+    }
+    result
   }
 
 }

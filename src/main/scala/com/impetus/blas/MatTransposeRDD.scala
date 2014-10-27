@@ -1,4 +1,4 @@
-package org.impetus.sparkBlas
+package com.impetus.blas
 
 import org.apache.spark.rdd.RDD
 
