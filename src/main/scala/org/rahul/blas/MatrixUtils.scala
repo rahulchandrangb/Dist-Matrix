@@ -1,4 +1,4 @@
-package com.impetus.blas
+package org.rahul.blas
 
 import breeze.linalg.DenseMatrix
 import scala.math._
